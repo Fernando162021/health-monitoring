@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:healthmonitoring_db}
+    username: ${DB_NAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database: postgresql
+  security:
+    jwt:
+      secret-key: 26c94d1d8cfff5b6311421d3f5801e90e4a2ff97a2014e1228700a49fc675fe2
+      expiration-time: 86400000 # 1 day in milliseconds
+      refresh-expiration-time: 604800000 # 7 days in milliseconds

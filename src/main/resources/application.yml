@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: Health Monitoring API
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+    path: /graphql
+    websocket:
+      path: /graphql
+logging:
+  level:
+    org.apache.coyote.http11.Http11Processor: WARN
+    org.apache.catalina.connector: WARN
+    com.raccoon.healthmonitoring: INFO
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%t] %-40.40logger{39} : %m%n'

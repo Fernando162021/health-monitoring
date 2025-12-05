@@ -1,0 +1,947 @@
+[
+    {
+        "id": "e5bec7852a1dcac3",
+        "type": "tab",
+        "label": "final",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "883466b723e9244d",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "P-102",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "2.0",
+        "topic": "",
+        "x": 390,
+        "y": 260,
+        "wires": [
+            [
+                "340501437a3de9cb"
+            ]
+        ]
+    },
+    {
+        "id": "6e7967fca49d207b",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "get access token",
+        "func": "const token = flow.get('token');\nif (!token){\n    return msg;\n}\nmsg.payload = {token};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 420,
+        "wires": [
+            [
+                "90db436f34b5b48a",
+                "e6cdcd3ae8fe2990"
+            ]
+        ]
+    },
+    {
+        "id": "aa24aa689b36163d",
+        "type": "http request",
+        "z": "e5bec7852a1dcac3",
+        "name": "POST /devices/data",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:8080/api/devices/data",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "Authorization",
+                "keyValue": "",
+                "valueType": "msg",
+                "valueValue": "payload.token"
+            },
+            {
+                "keyType": "other",
+                "keyValue": "content-type",
+                "valueType": "other",
+                "valueValue": "application/json"
+            }
+        ],
+        "x": 840,
+        "y": 260,
+        "wires": [
+            [
+                "923d09a30b78bd29",
+                "02b291eca6a5bcb6"
+            ]
+        ]
+    },
+    {
+        "id": "923d09a30b78bd29",
+        "type": "debug",
+        "z": "e5bec7852a1dcac3",
+        "name": "Data debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1050,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "75d6db6f9aa05821",
+        "type": "websocket in",
+        "z": "e5bec7852a1dcac3",
+        "name": "websocket in (client)",
+        "server": "",
+        "client": "4daa42cc2b899fee",
+        "x": 810,
+        "y": 680,
+        "wires": [
+            [
+                "97836a4d845749a9",
+                "8665bdf5388841a2"
+            ]
+        ]
+    },
+    {
+        "id": "410695e459d673db",
+        "type": "websocket out",
+        "z": "e5bec7852a1dcac3",
+        "name": "websocket out (client)",
+        "server": "",
+        "client": "4daa42cc2b899fee",
+        "x": 580,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "d24b23b6840b51b9",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "init: connection_init",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"connection_init\"}",
+        "payloadType": "json",
+        "x": 350,
+        "y": 680,
+        "wires": [
+            [
+                "410695e459d673db"
+            ]
+        ]
+    },
+    {
+        "id": "97836a4d845749a9",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "parse graphql-ws",
+        "func": "let raw = msg.payload;\ntry {\n  if (typeof raw === 'string') raw = JSON.parse(raw);\n} catch (e) {\n  node.warn('WS payload not JSON');\n  return null;\n}\n\nif (raw.type === 'connection_ack') {\n  node.status({fill:'green',shape:'dot',text:'connected'});\n  return null;\n}\n\nif (raw.type !== 'next') return null;\n\nconst v = raw.payload?.data?.liveVitals;\nlet msg0, msg1, msg2, msg3;\nif (v) {\n  msg0 = { payload: Number(v.heartRate), topic: 'Heart Rate', label: 'out0' };\n  msg1 = { payload: Number(v.bodyTemperature), topic: 'Temperature', label: 'out1' };\n  msg2 = { payload: Number(v.heartRate), topic: 'HR Gauge', label: 'out2' };\n  msg3 = { payload: Number(v.oxygenLevel), topic: 'SpO2 Gauge', label: 'out3' };\n\n  msg0.debugInfo = `out0 -> HR ${msg0.payload}`;\n  msg1.debugInfo = `out1 -> Temp ${msg1.payload}`;\n  msg2.debugInfo = `out2 -> HRg ${msg2.payload}`;\n  msg3.debugInfo = `out3 -> SpO2 ${msg3.payload}`;\n}\n\nconst a = raw.payload?.data?.liveAlerts;\nlet msg4 = null;\nif (a) {\n  msg4 = { payload: a, topic: 'Alert', label: 'out4' };\n  msg4.debugInfo = `out4 -> Alert for device ${a.deviceId} metric ${a.metric} value ${a.value}`;\n}\n\nreturn [msg0, msg1, msg2, msg3, msg4];",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 660,
+        "wires": [
+            [
+                "fe0986d9c964c15a"
+            ],
+            [
+                "ea7cd3a967b79719"
+            ],
+            [
+                "a3c4a073bd9bce94"
+            ],
+            [
+                "2ad80771f16c787f"
+            ],
+            [
+                "df77aa5fa1fed4e9"
+            ]
+        ]
+    },
+    {
+        "id": "eca827c17a3afadd",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "subscribe: start Vital subscription",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"id\":\"sub1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription LiveVitals { liveVitals { id heartRate oxygenLevel bodyTemperature steps}}\"}}",
+        "payloadType": "json",
+        "x": 250,
+        "y": 760,
+        "wires": [
+            [
+                "410695e459d673db"
+            ]
+        ]
+    },
+    {
+        "id": "fe0986d9c964c15a",
+        "type": "ui_chart",
+        "z": "e5bec7852a1dcac3",
+        "name": "Heart Rate Chart",
+        "group": "b9f8c0c18be8b1ba",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "Heart Rate Chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "100",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1330,
+        "y": 560,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8665bdf5388841a2",
+        "type": "debug",
+        "z": "e5bec7852a1dcac3",
+        "name": "debug raw WS",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1040,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "ea7cd3a967b79719",
+        "type": "ui_chart",
+        "z": "e5bec7852a1dcac3",
+        "name": "Temperature Chart",
+        "group": "b9f8c0c18be8b1ba",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "Temperature Chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1310,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a3c4a073bd9bce94",
+        "type": "ui_gauge",
+        "z": "e5bec7852a1dcac3",
+        "name": "HR Gauge",
+        "group": "b9f8c0c18be8b1ba",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "HR Gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": "30",
+        "max": "200",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 1310,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "2ad80771f16c787f",
+        "type": "ui_gauge",
+        "z": "e5bec7852a1dcac3",
+        "name": "SpO₂ Level Gauge",
+        "group": "b9f8c0c18be8b1ba",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "SpO₂ Level Gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": "50",
+        "max": "100",
+        "colors": [
+            "#b30000",
+            "#e6e600",
+            "#52cb3a"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 1330,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "051a9597f70c9a88",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "subscribe: start Alert subscription",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"id\":\"sub2\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription LiveAlerts { liveAlerts { id deviceId metric value threshold triggeredAt acknowledged } }\"}}",
+        "payloadType": "json",
+        "x": 250,
+        "y": 820,
+        "wires": [
+            [
+                "410695e459d673db"
+            ]
+        ]
+    },
+    {
+        "id": "a1ab8c75a0d1bb52",
+        "type": "ui_form",
+        "z": "e5bec7852a1dcac3",
+        "name": "Login Form",
+        "label": "Login Form",
+        "group": "8491c5da4c01a809",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "email",
+                "value": "email",
+                "type": "email",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "password",
+                "value": "password",
+                "type": "password",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "email": "",
+            "password": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 410,
+        "y": 100,
+        "wires": [
+            [
+                "4b53c1bc980d53fd"
+            ]
+        ]
+    },
+    {
+        "id": "4b53c1bc980d53fd",
+        "type": "http request",
+        "z": "e5bec7852a1dcac3",
+        "name": "Login request",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:8080/api/auth/login",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 600,
+        "y": 100,
+        "wires": [
+            [
+                "f803a1b4a7ffcb5e",
+                "8b24bf6bd1efd218"
+            ]
+        ]
+    },
+    {
+        "id": "f803a1b4a7ffcb5e",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "Token",
+        "func": "if(msg.payload.accessToken && msg.payload.refreshToken){\n    const token = `Bearer ${msg.payload.accessToken}`;\n    flow.set('token', token);\n    flow.set('refreshToken', msg.payload.refreshToken);\n    msg.payload = { \n        login: true, \n        tab: 'Dashboard', \n        msg: 'Login success' \n    };\n}else{\n    msg.payload = { \n        login: false, \n        msg: 'Wrong username or password!' \n    };\n}\n\nmsg.topic = msg.payload.msg;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 100,
+        "wires": [
+            [
+                "1af36eb635998e30",
+                "2d270e9baf90d621",
+                "d09ecd8a4d625263"
+            ]
+        ]
+    },
+    {
+        "id": "1af36eb635998e30",
+        "type": "ui_ui_control",
+        "z": "e5bec7852a1dcac3",
+        "name": "",
+        "events": "all",
+        "x": 1020,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "340501437a3de9cb",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "Data",
+        "func": "msg.payload = {\n    deviceId: \"P-102\",\n    heartRate: 90,\n    oxygenLevel: 96,\n    bodyTemperature: 36.7,\n    steps: 5400\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 260,
+        "wires": [
+            [
+                "aa24aa689b36163d"
+            ]
+        ]
+    },
+    {
+        "id": "2d270e9baf90d621",
+        "type": "debug",
+        "z": "e5bec7852a1dcac3",
+        "name": "Login debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1030,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "d09ecd8a4d625263",
+        "type": "ui_toast",
+        "z": "e5bec7852a1dcac3",
+        "position": "top right",
+        "displayTime": "3",
+        "highlight": "",
+        "sendall": true,
+        "outputs": 0,
+        "ok": "OK",
+        "cancel": "",
+        "raw": false,
+        "className": "",
+        "topic": "",
+        "name": "",
+        "x": 1050,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "02b291eca6a5bcb6",
+        "type": "ui_toast",
+        "z": "e5bec7852a1dcac3",
+        "position": "top right",
+        "displayTime": "3",
+        "highlight": "",
+        "sendall": true,
+        "outputs": 0,
+        "ok": "OK",
+        "cancel": "",
+        "raw": false,
+        "className": "",
+        "topic": "",
+        "name": "",
+        "x": 1070,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "8b24bf6bd1efd218",
+        "type": "debug",
+        "z": "e5bec7852a1dcac3",
+        "name": "Login Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 800,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "df77aa5fa1fed4e9",
+        "type": "ui_toast",
+        "z": "e5bec7852a1dcac3",
+        "position": "dialog",
+        "displayTime": "3",
+        "highlight": "",
+        "sendall": true,
+        "outputs": 1,
+        "ok": "OK",
+        "cancel": "",
+        "raw": false,
+        "className": "",
+        "topic": "",
+        "name": "Alert",
+        "x": 1290,
+        "y": 840,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f3b7b57e0a8d3008",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "Stop",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 330,
+        "y": 420,
+        "wires": [
+            [
+                "6e7967fca49d207b"
+            ]
+        ]
+    },
+    {
+        "id": "4f79683ac1c5e9b0",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "Anomaly",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 380,
+        "y": 320,
+        "wires": [
+            [
+                "51885bc82777b19d"
+            ]
+        ]
+    },
+    {
+        "id": "51885bc82777b19d",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "Anomaly data",
+        "func": "msg.payload = {\n    deviceId: \"P-102\",\n    heartRate: 160,\n    oxygenLevel: 96,\n    bodyTemperature: 36.7,\n    steps: 5400\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 320,
+        "wires": [
+            [
+                "aa24aa689b36163d"
+            ]
+        ]
+    },
+    {
+        "id": "90db436f34b5b48a",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "Build ack URL",
+        "func": "const deviceId = \"P-102\";\n\nmsg.url = `http://localhost:8080/api/devices/${encodeURIComponent(deviceId)}/ack`;\nmsg.method = \"PATCH\";\nmsg.headers = {\n    'Authorization': flow.get('token') || '',\n    'Content-Type': 'application/json'\n};\n\nmsg.payload = {};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 720,
+        "y": 420,
+        "wires": [
+            [
+                "b134bc6c719dfcb6"
+            ]
+        ]
+    },
+    {
+        "id": "b134bc6c719dfcb6",
+        "type": "http request",
+        "z": "e5bec7852a1dcac3",
+        "name": "acknowledge alert",
+        "method": "use",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 930,
+        "y": 420,
+        "wires": [
+            [
+                "8123b2642f805a92"
+            ]
+        ]
+    },
+    {
+        "id": "8123b2642f805a92",
+        "type": "debug",
+        "z": "e5bec7852a1dcac3",
+        "name": "ack debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1130,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "e6cdcd3ae8fe2990",
+        "type": "http request",
+        "z": "e5bec7852a1dcac3",
+        "name": "GET /devices/history",
+        "method": "use",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 790,
+        "y": 540,
+        "wires": [
+            [
+                "83af95f4216649ff"
+            ]
+        ]
+    },
+    {
+        "id": "83af95f4216649ff",
+        "type": "ui_table",
+        "z": "e5bec7852a1dcac3",
+        "group": "b9f8c0c18be8b1ba",
+        "name": "Device History",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "columns": [
+            {
+                "field": "createdAt",
+                "title": "Time",
+                "width": "120",
+                "align": "left",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "heartRate",
+                "title": "HR",
+                "width": "60",
+                "align": "right",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "oxygenLevel",
+                "title": "SpO₂",
+                "width": "60",
+                "align": "right",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "bodyTemperature",
+                "title": "Temp",
+                "width": "60",
+                "align": "right",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            },
+            {
+                "field": "steps",
+                "title": "Steps",
+                "width": "80",
+                "align": "right",
+                "formatter": "plaintext",
+                "formatterParams": {
+                    "target": "_blank"
+                }
+            }
+        ],
+        "outputs": 1,
+        "cts": true,
+        "x": 1050,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b612463537098725",
+        "type": "function",
+        "z": "e5bec7852a1dcac3",
+        "name": "Build URL",
+        "func": "const deviceId = \"P-102\";\n\nmsg.url = `http://localhost:8080/api/devices/${encodeURIComponent(deviceId)}/history`;\nmsg.method = \"GET\";\nmsg.headers = {\n    'Authorization': flow.get('token') || '',\n    'Content-Type': 'application/json'\n};\n\nmsg.payload = {};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 540,
+        "wires": [
+            [
+                "e6cdcd3ae8fe2990"
+            ]
+        ]
+    },
+    {
+        "id": "540e2c622cafb8e6",
+        "type": "inject",
+        "z": "e5bec7852a1dcac3",
+        "name": "Load device history",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.5",
+        "topic": "",
+        "x": 330,
+        "y": 540,
+        "wires": [
+            [
+                "b612463537098725"
+            ]
+        ]
+    },
+    {
+        "id": "4daa42cc2b899fee",
+        "type": "websocket-client",
+        "path": "ws://localhost:8080/graphql",
+        "tls": "",
+        "wholemsg": "false",
+        "hb": "0",
+        "subprotocol": "",
+        "headers": []
+    },
+    {
+        "id": "b9f8c0c18be8b1ba",
+        "type": "ui_group",
+        "name": "Dashboard",
+        "tab": "756df56b09ae5578",
+        "order": 1,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "8491c5da4c01a809",
+        "type": "ui_group",
+        "name": "login",
+        "tab": "e9ef54977c8aa55b",
+        "order": 1,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "756df56b09ae5578",
+        "type": "ui_tab",
+        "name": "Dashboard",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "e9ef54977c8aa55b",
+        "type": "ui_tab",
+        "name": "Login",
+        "icon": "login",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "fb948727dbe7da62",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6",
+            "node-red-node-ui-table": "0.4.5"
+        }
+    }
+]
