@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.raccoon.healthmonitoring.auth.model.Token;
+import com.raccoon.healthmonitoring.auth.repository.TokenRepository;
+
 @Service
 public class JwtService {
     @Value("${spring.security.jwt.secret-key}")
@@ -22,6 +26,9 @@ public class JwtService {
     private Long jwtExpiration;
     @Value("${spring.security.jwt.refresh-expiration-time}")
     private Long refreshExpiration;
+
+    @Autowired
+    private TokenRepository tokenRepository;
 
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
@@ -77,11 +84,17 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(requireToken(token));
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token) && !isTokenRevoked(token);
     }
 
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
+    }
+
+    private boolean isTokenRevoked(String token) {
+        return tokenRepository.findByToken(token)
+                .map(Token::getIsRevoked)
+                .orElse(true); // treat unknown token as revoked (fail-closed)
     }
 
     public Long getExpirationTime() {
