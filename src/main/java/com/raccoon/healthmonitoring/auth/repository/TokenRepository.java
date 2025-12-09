@@ -11,7 +11,16 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TokenRepository extends JpaRepository<Token, Long> {
-    @Query("SELECT t FROM Token t WHERE t.user.id = :userId AND t.isExpired = false AND t.isRevoked = false")
+    @Query(
+            """
+            SELECT t
+            FROM Token t
+            WHERE
+                t.user.id = :userId
+                AND t.isExpired = FALSE
+                AND t.isRevoked = FALSE
+            """
+    )
     List<Token> findAllValidTokenByUser(@Param("userId") Long userId);
 
     Optional<Token> findByToken(String token);

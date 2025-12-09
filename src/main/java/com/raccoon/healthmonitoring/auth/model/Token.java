@@ -1,6 +1,6 @@
 package com.raccoon.healthmonitoring.auth.model;
 
-import com.raccoon.healthmonitoring.common.enums.TokenType;
+import com.raccoon.healthmonitoring.auth.enums.TokenType;
 import com.raccoon.healthmonitoring.users.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

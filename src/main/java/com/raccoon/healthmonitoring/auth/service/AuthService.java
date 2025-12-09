@@ -3,15 +3,14 @@ package com.raccoon.healthmonitoring.auth.service;
 import com.raccoon.healthmonitoring.auth.dto.LoginRequestDto;
 import com.raccoon.healthmonitoring.auth.dto.RegisterRequestDto;
 import com.raccoon.healthmonitoring.auth.dto.TokenResponse;
+import com.raccoon.healthmonitoring.auth.enums.TokenType;
 import com.raccoon.healthmonitoring.auth.exception.AccountLockedException;
 import com.raccoon.healthmonitoring.auth.model.Token;
 import com.raccoon.healthmonitoring.auth.model.UserPrincipal;
 import com.raccoon.healthmonitoring.auth.repository.TokenRepository;
-import com.raccoon.healthmonitoring.common.enums.TokenType;
 import com.raccoon.healthmonitoring.users.User;
 import com.raccoon.healthmonitoring.users.UserRepository;
 import jakarta.validation.ValidationException;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -84,7 +83,7 @@ public class AuthService {
             String jwtToken = jwtService.generateToken(new HashMap<>(), userPrincipal);
             String refreshToken = jwtService.generateRefreshToken(new HashMap<>(), userPrincipal);
             revokeAllUserTokens(user);
-            saveUserToken(user, jwtToken);
+            saveUserToken(user, refreshToken);
             return new TokenResponse(jwtToken, refreshToken);
         } catch (BadCredentialsException e) {
             loginAttemptService.loginFailed(request.email());
@@ -104,11 +103,7 @@ public class AuthService {
         }
     }
 
-    public TokenResponse refreshToken(@NotNull String authentication) {
-        if (authentication == null || !authentication.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Invalid auth header");
-        }
-
+    public TokenResponse refreshToken(String authentication) {
         String refreshToken = authentication.substring(7);
         String userEmail = jwtService.extractUsername(refreshToken);
         if (userEmail == null) {
@@ -123,20 +118,13 @@ public class AuthService {
         }
 
         String accessToken = jwtService.generateToken(new HashMap<>(), userPrincipal);
-        revokeAllUserTokens(user);
-        saveUserToken(user, accessToken);
         return new TokenResponse(accessToken, refreshToken);
     }
 
     public void logout(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Invalid auth header");
-        }
+        String refreshToken = authHeader.substring(7);
 
-        String token = authHeader.substring(7);
-
-        // Search for the token and mark it as expired and revoked
-        tokenRepository.findByToken(token).ifPresent(storedToken -> {
+        tokenRepository.findByToken(refreshToken).ifPresent(storedToken -> {
             storedToken.setIsExpired(true);
             storedToken.setIsRevoked(true);
             tokenRepository.save(storedToken);

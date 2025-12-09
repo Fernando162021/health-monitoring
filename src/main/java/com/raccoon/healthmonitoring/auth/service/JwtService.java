@@ -16,9 +16,9 @@ import java.util.function.Function;
 
 @Service
 public class JwtService {
-    @Value("${spring.security.jwt.secret:mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong}")
+    @Value("${spring.security.jwt.secret-key}")
     private String secretKey;
-    @Value("${spring.security.jwt.expiration:86400000}")
+    @Value("${spring.security.jwt.expiration-time}")
     private Long jwtExpiration;
     @Value("${spring.security.jwt.refresh-expiration-time}")
     private Long refreshExpiration;

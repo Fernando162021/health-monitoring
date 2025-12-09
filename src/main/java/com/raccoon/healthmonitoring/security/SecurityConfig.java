@@ -1,6 +1,7 @@
 package com.raccoon.healthmonitoring.security;
 
 import com.raccoon.healthmonitoring.auth.filter.JwtFilter;
+import com.raccoon.healthmonitoring.auth.filter.RateLimitFilter;
 import com.raccoon.healthmonitoring.auth.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     final private JwtFilter jwtFilter;
+    final private RateLimitFilter rateLimitFilter;
     final private CustomUserDetailsService userDetailsService;
 
     @Bean
@@ -32,11 +34,12 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/api/auth/**", "api/devices/data", "/graphql").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/devices/data", "/graphql").permitAll()
                         .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

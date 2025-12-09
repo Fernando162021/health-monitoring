@@ -4,6 +4,7 @@ import com.raccoon.healthmonitoring.auth.dto.LoginRequestDto;
 import com.raccoon.healthmonitoring.auth.dto.RegisterRequestDto;
 import com.raccoon.healthmonitoring.auth.dto.TokenResponse;
 import com.raccoon.healthmonitoring.auth.service.AuthService;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -37,21 +38,21 @@ public class AuthController {
 
     @PostMapping("/refresh-token")
     public ResponseEntity<TokenResponse> refreshToken(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authentication
+            @NotBlank @RequestHeader(HttpHeaders.AUTHORIZATION) String authentication
     ) {
-        log.info("Token refresh attempt for token: {}", authentication);
+        log.info("Token refresh attempt");
         TokenResponse response = authService.refreshToken(authentication);
-        log.info("Token refreshed successfully for token: {}", authentication);
+        log.info("Token refreshed successfully");
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authentication
+            @NotBlank @RequestHeader(HttpHeaders.AUTHORIZATION) String authentication
     ) {
-        log.info("Logout attempt for token: {}", authentication);
+        log.info("Logout attempt");
         authService.logout(authentication);
-        log.info("Logout successful for token: {}", authentication);
+        log.info("Logout successful");
         return ResponseEntity.noContent().build();
     }
 }
