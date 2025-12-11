@@ -34,7 +34,6 @@ public class AuthService {
     private final LoginAttemptService loginAttemptService;
 
     public TokenResponse register(RegisterRequestDto request) {
-
         if (!request.password().equals(request.confirmPassword())) {
             throw new ValidationException("Passwords do not match");
         }
@@ -57,6 +56,8 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequestDto request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new IllegalArgumentException("User does not exist with the provided email"));
 
         if (loginAttemptService.isBlocked(request.email())) {
             LocalDateTime blockedUntil = loginAttemptService.getLockedUntil(request.email());
@@ -75,9 +76,6 @@ public class AuthService {
             );
 
             loginAttemptService.loginSucceeded(request.email());
-
-            User user = userRepository.findByEmail(request.email())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
             UserPrincipal userPrincipal = new UserPrincipal(user);
             String jwtToken = jwtService.generateToken(new HashMap<>(), userPrincipal);
@@ -112,7 +110,7 @@ public class AuthService {
 
         User user = userRepository.findByEmail(userEmail).orElseThrow();
         UserPrincipal userPrincipal = new UserPrincipal(user);
-        boolean isTokenValid = jwtService.isTokenValid(refreshToken, userPrincipal);
+        boolean isTokenValid = jwtService.isRefreshTokenValid(refreshToken, userPrincipal);
         if (!isTokenValid) {
             throw new IllegalArgumentException("Invalid refresh token");
         }
